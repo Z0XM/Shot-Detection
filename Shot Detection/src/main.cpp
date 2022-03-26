@@ -64,7 +64,7 @@ int main()
 {
 	char filePath[] = "./res/Strange12.mp4";
 	std::vector<Algorithm*> algorithms;
-	algorithms.push_back(new PixelDifference(filePath));
+	//algorithms.push_back(new PixelDifference(filePath));
 	//algorithms.push_back(new PixelDifferenceColor(filePath));
 	//algorithms.push_back(new Histogram_Bin2Bin(filePath));
 	//algorithms.push_back(new Histogram_ChiSqrOld(filePath));
