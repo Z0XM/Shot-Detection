@@ -1,0 +1,50 @@
+
+// Histogram Bin 2 bin Old
+
+cv::Mat frame;
+
+	std::vector<std::vector<std::vector<uint32_t>>> pBin(256, std::vector<std::vector<uint32_t>>(256, std::vector<uint32_t>(256, 0)));
+	//std::map<uint32_t, uint32_t> pBin;
+
+
+	uint frame_index = 1;
+	while (true) {
+		std::cout << frame_index << '\n';
+		if (!getVideo().read(frame)) break;
+
+		std::vector<std::vector<std::vector<uint32_t>>> nBin(256, std::vector<std::vector<uint32_t>>(256, std::vector<uint32_t>(256, 0)));
+		//std::map<uint32_t, uint32_t> nBin;
+
+		int channels = frame.channels();
+		uint8_t* imageData = (uint8_t*)frame.data;
+		for (int i = 0; i < frame.rows; i++) {
+			for (int j = 0; j < frame.cols; j++) {
+				uint8_t b = imageData[i*frame.cols*channels + j * channels + 0];
+				uint8_t g = imageData[i*frame.cols*channels + j * channels + 1];
+				uint8_t r = imageData[i*frame.cols*channels + j * channels + 2];
+
+				nBin[b][g][r]++;
+			}
+		}
+
+		uint32_t dIntensity = 0;
+
+		for (int i = 0; i < 256; i++) {
+			for (int j = 0; j < 256; j++) {
+				for (int k = 0; k < 256; k++) {
+					dIntensity += absDifference(pBin[i][j][k], nBin[i][j][k]);
+					pBin[i][j][k] = nBin[i][j][k];
+				}
+			}
+		}
+
+		if (frame_index != 1)
+			m_ResultFile << frame_index << "\t\t\t" << dIntensity / (frame.rows * frame.cols) << '\n'; // ASK: dIntensity / (frame.rows * frame.cols)
+		frame_index++;
+
+	}
+
+	m_TotalFrames = frame_index;
+
+
+////////////////////////////////////////////////////////////////////////////////////////
