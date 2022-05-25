@@ -9,7 +9,7 @@
 
 class Algorithm{
 public:
-	Algorithm(const std::string& videoFilepath, const std::string& title, const std::string& ylabel, const std::string& xlabel, uint32_t threshold)
+	Algorithm(const std::string& videoFilepath, const std::string& title, const std::string& ylabel, const std::string& xlabel, double threshold)
 		:m_Video(videoFilepath),
 		m_ResultFilePath("./results/data/" + title + ".dat"),
 		m_Title(title), m_Ylabel(ylabel), m_Xlabel(xlabel),
@@ -53,7 +53,7 @@ protected:
 	std::string m_FrameFilePath;
 	uint32_t m_TotalFrames;
 	bool m_Error;
-	uint32_t m_Threshold;
+	double m_Threshold;
 	std::ofstream m_ResultFile;
 };
 
@@ -90,7 +90,7 @@ public:
 class Histogram_ChiSqrNew : public Algorithm {
 public:
 	Histogram_ChiSqrNew(const char* filepath = 0)
-		:Algorithm(filepath, "Historgram Chi Square New", "Histogram Difference", "Frame Index", 2)
+		:Algorithm(filepath, "Historgram Chi Square New", "Histogram Difference", "Frame Index", 3e3)
 	{
 	}
 
@@ -100,7 +100,7 @@ public:
 class Histogram_ChiSqrOld : public Algorithm {
 public:
 	Histogram_ChiSqrOld(const char* filepath = 0)
-		:Algorithm(filepath, "Historgram Chi Square Old", "Histogram Difference", "Frame Index", 2e4)
+		:Algorithm(filepath, "Historgram Chi Square Old", "Histogram Difference", "Frame Index", 25e4)
 	{
 	}
 
@@ -111,13 +111,22 @@ public:
 class Histogram_Intersect : public Algorithm {
 public:
 	Histogram_Intersect(const char* filepath = 0)
-		:Algorithm(filepath, "Historgram Intersect", "Histogram Difference", "Frame Index", 5e8)
+		:Algorithm(filepath, "Historgram Intersect", "Histogram Difference", "Frame Index", -0.325)
 	{
 	}
 
 	void algo() override;
 };
 
+class EdgeChangeRatio : public Algorithm {
+public:
+	EdgeChangeRatio(const char* filepath = 0)
+		:Algorithm(filepath, "Edge Change Ratio", "Edge Change Ratio", "Frame Index", 5e8)
+	{
+	}
+
+	void algo() override;
+};
 
 class MutualInfo_Cut : public Algorithm {
 public:

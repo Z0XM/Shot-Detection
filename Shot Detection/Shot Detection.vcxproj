@@ -149,6 +149,7 @@
     <Text Include="src\dump.txt" />
   </ItemGroup>
   <ItemGroup>
+    <Media Include="res\NewVid.mp4" />
     <Media Include="res\Strange.mp4" />
     <Media Include="res\Strange12.mp4" />
     <Media Include="res\StrangeClip.mp4" />

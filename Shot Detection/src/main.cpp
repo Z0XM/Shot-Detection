@@ -62,14 +62,15 @@ void GNUPlotMultiple(const std::vector<Algorithm*>& algorithms)
 
 int main()
 {
-	char filePath[] = "./res/Strange12.mp4";
+	char filePath[] = "./res/NewVid.mp4";
 	std::vector<Algorithm*> algorithms;
 	//algorithms.push_back(new PixelDifference(filePath));
 	//algorithms.push_back(new PixelDifferenceColor(filePath));
 	//algorithms.push_back(new Histogram_Bin2Bin(filePath));
 	//algorithms.push_back(new Histogram_ChiSqrOld(filePath));
 	//algorithms.push_back(new Histogram_ChiSqrNew(filePath));
-	//algorithms.push_back(new Histogram_Intersect(filePath));
+	algorithms.push_back(new Histogram_Intersect(filePath));
+	//algorithms.push_back(new EdgeChangeRatio(filePath));
 
 	bool error = false;
 	int i = 0;
@@ -90,3 +91,4 @@ int main()
 	}
 
 }
+

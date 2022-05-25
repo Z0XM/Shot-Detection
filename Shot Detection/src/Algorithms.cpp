@@ -10,19 +10,23 @@ T absDifference(T a, T b) {
 }
 
 
-void genCutFrames(const std::string& filepath, int frame_index, cv::Mat& first, cv::Mat& second)
+void genCutFrames(const std::string& filepath, const std::vector<int>& cuts, const std::vector<cv::Mat>& frames)
 {
-	std::string imgDir = filepath + "/" + std::to_string(frame_index);
-	std::filesystem::create_directories(imgDir);
-	cv::imwrite(imgDir + "/first.png", first);
-	cv::imwrite(imgDir + "/second.png", second);
+	for (int i = 0; i < cuts.size(); i++) {
+		std::string imgDir = filepath + "/" + std::to_string(cuts[i]);
+		std::filesystem::create_directories(imgDir);
+		for (int j = std::max(0, cuts[i] - 5); j < std::min((int)frames.size(), cuts[i] + 5); j++)
+			cv::imwrite(imgDir + "/" + std::to_string(j) + ".png", frames[j]);
+	}
 }
 
 void PixelDifference::algo()
 {
 	std::filesystem::remove_all(m_FrameFilePath);
 
-	cv::Mat frame, grayFrame, prevFrame;
+	cv::Mat frame, grayFrame;
+	std::vector<cv::Mat> allFrames;
+	std::vector<int> cuts;
 	uint8_t* prevIntensity;
 
 	// First Frame
@@ -35,9 +39,7 @@ void PixelDifference::algo()
 			prevIntensity[i * grayFrame.cols + j] = imageData[i * grayFrame.cols + j];
 		}
 	}
-
-	prevFrame = frame.clone();
-
+	allFrames.push_back(frame.clone());
 	
 	uint frame_index = 2;
 	while (true) {
@@ -45,7 +47,7 @@ void PixelDifference::algo()
 
 		cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
 
-		uint32_t dIntensity = 0;
+		double dIntensity = 0;
 
 		uint8_t* imageData = (uint8_t*)grayFrame.data;
 		for (int i = 0; i < grayFrame.rows; i++) {
@@ -64,15 +66,17 @@ void PixelDifference::algo()
 			m_ResultFile << frame_index << "\t\t\t" << dIntensity << '\n';
 
 			if (dIntensity > m_Threshold) {
-				genCutFrames(m_FrameFilePath, frame_index, prevFrame, frame);
+				cuts.push_back(frame_index-1);
 			}
 		}
 		
-		prevFrame = frame.clone();
+		allFrames.push_back(frame.clone());
 		frame_index++;
 	}
 
 	m_TotalFrames = frame_index;
+
+	genCutFrames(m_FrameFilePath, cuts, allFrames);
 
 	delete prevIntensity;
 }
@@ -81,7 +85,9 @@ void PixelDifferenceColor::algo()
 {
 	std::filesystem::remove_all(m_FrameFilePath);
 
-	cv::Mat frame, prevFrame;
+	cv::Mat frame;
+	std::vector<cv::Mat> allFrames;
+	std::vector<int> cuts;
 
 	struct Intensity {
 		uint8_t *b, *g, *r;
@@ -103,13 +109,13 @@ void PixelDifferenceColor::algo()
 		}
 	}
 
-	prevFrame = frame.clone();
+	allFrames.push_back(frame.clone());
 
 	uint frame_index = 2;
 	while (true) {
 		if (!getVideo().read(frame)) break;
 
-		uint32_t dIntensity = 0;
+		double dIntensity = 0;
 
 		int channels = frame.channels();
 		uint8_t* imageData = (uint8_t*)frame.data;
@@ -137,15 +143,17 @@ void PixelDifferenceColor::algo()
 			m_ResultFile << frame_index << "\t\t\t" << dIntensity << '\n';
 
 			if (dIntensity > m_Threshold) {
-				genCutFrames(m_FrameFilePath, frame_index, prevFrame, frame);
+				cuts.push_back(frame_index-1);
 			}
 		}
 
-		prevFrame = frame.clone();
+		allFrames.push_back(frame.clone());
 		frame_index++;
 	}
 
 	m_TotalFrames = frame_index;
+
+	genCutFrames(m_FrameFilePath, cuts, allFrames);
 
 	delete prevIntensity.b, prevIntensity.g, prevIntensity.r;
 }
@@ -154,7 +162,9 @@ void Histogram_Bin2Bin::algo()
 {
 	std::filesystem::remove_all(m_FrameFilePath);
 
-	cv::Mat frame, grayFrame, prevFrame;
+	cv::Mat frame, grayFrame;
+	std::vector<cv::Mat> allFrames;
+	std::vector<int> cuts;
 
 	struct ColorBins {
 		uint32_t rBin[256] = { 0 }, gBin[256] = { 0 }, bBin[256] = { 0 };
@@ -179,7 +189,7 @@ void Histogram_Bin2Bin::algo()
 			}
 		}
 
-		uint32_t dIntensity = 0;
+		double dIntensity = 0;
 
 		for (int i = 0; i < 256; i++) {
 			dIntensity += absDifference(newBins.bBin[i], prevBins.bBin[i]);
@@ -196,22 +206,26 @@ void Histogram_Bin2Bin::algo()
 			m_ResultFile << frame_index << "\t\t\t" << value << '\n';
 			
 			if (value > m_Threshold) {
-				genCutFrames(m_FrameFilePath, frame_index, prevFrame, frame);
+				cuts.push_back(frame_index-1);
 			}
 		}
 
-		prevFrame = frame.clone();
+		allFrames.push_back(frame.clone());
 		frame_index++;
 	}
 
 	m_TotalFrames = frame_index;
+
+	genCutFrames(m_FrameFilePath, cuts, allFrames);
 }
 
 void Histogram_ChiSqrNew::algo()
 {
 	std::filesystem::remove_all(m_FrameFilePath);
 
-	cv::Mat frame, grayFrame, prevFrame;
+	cv::Mat frame, grayFrame;
+	std::vector<cv::Mat> allFrames;
+	std::vector<int> cuts;
 
 	struct ColorBins {
 		uint32_t rBin[256] = { 0 }, gBin[256] = { 0 }, bBin[256] = { 0 };
@@ -236,7 +250,7 @@ void Histogram_ChiSqrNew::algo()
 			}
 		}
 
-		uint32_t dIntensity = 0;
+		double dIntensity = 0;
 
 		for (int i = 0; i < 256; i++) {
 			uint32_t diff;
@@ -259,20 +273,22 @@ void Histogram_ChiSqrNew::algo()
 		}
 
 		if (frame_index != 1) {
-			double value = dIntensity / (frame.rows * frame.cols);
+			double value = dIntensity;// / (frame.rows * frame.cols);
 			m_ResultFile << frame_index << "\t\t\t" << value << '\n';// / (frame.rows * frame.cols * frame.rows * frame.cols)
 
 			if (value > m_Threshold) {
-				genCutFrames(m_FrameFilePath, frame_index, prevFrame, frame);
+				cuts.push_back(frame_index-1);
 			}
 			
 		}
 		
-		prevFrame = frame.clone();
+		allFrames.push_back(frame.clone());
 		frame_index++;
 	}
 
 	m_TotalFrames = frame_index;
+
+	genCutFrames(m_FrameFilePath, cuts, allFrames);
 }
 
 
@@ -280,7 +296,9 @@ void Histogram_ChiSqrOld::algo()
 {
 	std::filesystem::remove_all(m_FrameFilePath);
 
-	cv::Mat frame, grayFrame, prevFrame;
+	cv::Mat frame, grayFrame;
+	std::vector<cv::Mat> allFrames;
+	std::vector<int> cuts;
 
 	struct ColorBins {
 		uint32_t rBin[256] = { 0 }, gBin[256] = { 0 }, bBin[256] = { 0 };
@@ -305,7 +323,7 @@ void Histogram_ChiSqrOld::algo()
 			}
 		}
 
-		uint32_t dIntensity = 0;
+		double dIntensity = 0;
 
 		for (int i = 0; i < 256; i++) {
 			uint32_t diff;
@@ -332,33 +350,36 @@ void Histogram_ChiSqrOld::algo()
 			m_ResultFile << frame_index << "\t\t\t" << value << '\n'; 
 
 			if (value > m_Threshold) {
-				genCutFrames(m_FrameFilePath, frame_index, prevFrame, frame);
+				cuts.push_back(frame_index-1);
 			}
 		}
 
-		prevFrame = frame.clone();
+		allFrames.push_back(frame.clone());
 		frame_index++;
 	}
 
 	m_TotalFrames = frame_index;
+
+	genCutFrames(m_FrameFilePath, cuts, allFrames);
 }
 
 void Histogram_Intersect::algo()
 {
 	std::filesystem::remove_all(m_FrameFilePath);
 
-	cv::Mat frame, grayFrame, prevFrame;
+	cv::Mat frame, grayFrame;
+	std::vector<cv::Mat> allFrames;
+	std::vector<int> cuts;
 
-	struct ColorBins {
-		uint32_t rBin[256] = { 0 }, gBin[256] = { 0 }, bBin[256] = { 0 };
-	} prevBins;
+	
+	uint32_t prevHist[256] = { 0 };
 
 
 	uint frame_index = 1;
 	while (true) {
 		if (!getVideo().read(frame)) break;
 
-		ColorBins newBins;
+		uint32_t currHist[256] = { 0 };
 
 		int channels = frame.channels();
 		uint8_t* imageData = (uint8_t*)frame.data;
@@ -368,36 +389,95 @@ void Histogram_Intersect::algo()
 				uint8_t g = imageData[i*frame.cols*channels + j * channels + 1];
 				uint8_t r = imageData[i*frame.cols*channels + j * channels + 2];
 
-				newBins.bBin[b]++; newBins.gBin[g]++; newBins.rBin[r]++;
+				currHist[(b + g + r) / 3]++;
 			}
 		}
 
-		uint32_t dIntensity = 0;
+		double value = 0;
 
 		for (int i = 0; i < 256; i++) {
-
-			dIntensity += std::min(prevBins.bBin[i], newBins.bBin[i]);
-			dIntensity += std::min(prevBins.gBin[i], newBins.gBin[i]);
-			dIntensity += std::min(prevBins.rBin[i], newBins.rBin[i]);
-
-			prevBins.bBin[i] = newBins.bBin[i];
-			prevBins.gBin[i] = newBins.gBin[i];
-			prevBins.rBin[i] = newBins.rBin[i];
+			value += std::max(prevHist[i], currHist[i]);
+			prevHist[i] = currHist[i];
 		}
-
 		if (frame_index != 1) {
-			double value = 1 - dIntensity / (frame.rows * frame.cols);
+			value = 1 - value / (frame.rows * frame.cols);
 			m_ResultFile << frame_index << "\t\t\t" << value << '\n';
-
+			
 			if (value < m_Threshold) {
-				genCutFrames(m_FrameFilePath, frame_index, prevFrame, frame);
+				cuts.push_back(frame_index-1);
 			}
 		}
 
-		prevFrame = frame.clone();
+		allFrames.push_back(frame.clone());
 		frame_index++;
 	}
 
+	m_TotalFrames = frame_index;
+
+	genCutFrames(m_FrameFilePath, cuts, allFrames);
+}
+
+void EdgeChangeRatio::algo()
+{
+	std::filesystem::remove_all(m_FrameFilePath);
+
+	cv::Mat frame, grayFrame, blurFrame, sobelFrame, dilateFrame, invFrame, prevSobelFrame, prevInvFrame;
+	uint32_t prevEdgePixels;
+
+	uint frame_index = 1;
+
+	while (true) {
+		if (!getVideo().read(frame)) break;
+
+		cv::cvtColor(frame, grayFrame, cv::COLOR_BGR2GRAY);
+
+		cv::GaussianBlur(grayFrame, blurFrame, cv::Size(3, 3), 0);
+
+		cv::Sobel(blurFrame, sobelFrame, CV_64F, 0, 1, 5);
+
+		uint32_t currEdgePixels = 0;
+
+		uint8_t* imageData = (uint8_t*)sobelFrame.data;
+		for (int i = 0; i < sobelFrame.rows; i++) {
+			for (int j = 0; j < sobelFrame.cols; j++) {
+				if(imageData[i * sobelFrame.cols + j]!=0) currEdgePixels++;
+			}
+		}
+
+		cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
+
+		cv::dilate(sobelFrame, dilateFrame, kernel);
+
+		cv::bitwise_not(dilateFrame, invFrame);
+
+		if (frame_index != 1) {
+			cv::Mat currFinalFrame, prevFinalFrame;
+			cv::bitwise_and(prevInvFrame, sobelFrame, currFinalFrame);
+			cv::bitwise_and(invFrame, prevSobelFrame, prevFinalFrame);
+
+			uint8_t* prevData = (uint8_t*)prevFinalFrame.data;
+			uint8_t* currData = (uint8_t*)currFinalFrame.data;
+			
+			uint32_t prevEdgeChange = 0;
+			uint32_t currEdgeChange = 0;
+			for (int i = 0; i < prevFinalFrame.rows; i++) {
+				for (int j = 0; j < prevFinalFrame.cols; j++) {
+					if (prevData[i * prevFinalFrame.cols + j] != 0) prevEdgeChange++;
+					if (currData[i * currFinalFrame.cols + j] != 0) currEdgeChange++;
+				}
+			}
+
+			double value = std::max(prevEdgePixels / prevEdgeChange, currEdgePixels / currEdgeChange);
+			m_ResultFile << frame_index << "\t\t\t" << value << '\n';
+
+		}
+
+		prevInvFrame = invFrame.clone();
+		prevSobelFrame = sobelFrame.clone();
+		prevEdgePixels = currEdgePixels;
+
+		frame_index++;
+	}
 	m_TotalFrames = frame_index;
 }
 
@@ -442,7 +522,7 @@ void MutualInfo_Cut::algo()
 	//		}
 	//	}
 
-	//	uint32_t dIntensity = 0;
+	//	double dIntensity = 0;
 
 	//	if (frame_index != 1)
 	//		m_ResultFile << frame_index << "\t\t\t" << dIntensity / (frame.rows * frame.cols) << '\n';
